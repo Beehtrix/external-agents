@@ -20,7 +20,7 @@ export PATH="/path/to/external-agents/agents/entire-agent-hermes:$PATH"
 
 cd /path/to/repo
 mkdir -p .entire
-printf '{"external_agents":true}\n' > .entire/settings.json
+printf '{"external_agents":true}\n' > .entire/settings.local.json
 entire enable --agent hermes --telemetry=false
 ```
 
