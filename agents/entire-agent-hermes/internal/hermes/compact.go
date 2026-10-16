@@ -5,6 +5,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 
 	"github.com/entireio/external-agents/agents/entire-agent-hermes/internal/protocol"
 )
@@ -38,8 +42,16 @@ type compactToolResult struct {
 	Status string `json:"status"`
 }
 
+// maxCallerTranscriptSize bounds a caller-provided compact-transcript input.
+const maxCallerTranscriptSize = 128 << 20
+
 func (a *Agent) CompactTranscript(path string) (protocol.CompactTranscriptResponse, error) {
 	entries, _, err := readEntries(path, 0)
+	if errors.Is(err, errTranscriptPathNotOwned) {
+		// The Entire CLI compacts from its own temp copy of the redacted
+		// transcript, so accept a plain caller-provided file for this command only.
+		entries, err = readCallerTranscript(path)
+	}
 	if err != nil {
 		return protocol.CompactTranscriptResponse{}, err
 	}
@@ -88,4 +100,40 @@ func (a *Agent) CompactTranscript(path string) (protocol.CompactTranscriptRespon
 		return protocol.CompactTranscriptResponse{}, errors.New("compact transcript produced no output")
 	}
 	return protocol.CompactTranscriptResponse{Transcript: base64.StdEncoding.EncodeToString(output.Bytes())}, nil
+}
+
+// readCallerTranscript reads an absolute, regular, non-symlink file of bounded
+// size and parses it as an observer transcript.
+func readCallerTranscript(path string) ([]transcriptEntry, error) {
+	if !filepath.IsAbs(path) {
+		return nil, errTranscriptPathNotOwned
+	}
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() || info.Size() > maxCallerTranscriptSize {
+		return nil, errTranscriptPathNotOwned
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	opened, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !os.SameFile(info, opened) {
+		return nil, errTranscriptPathNotOwned
+	}
+	data, err := io.ReadAll(io.LimitReader(f, maxCallerTranscriptSize+1))
+	if err != nil {
+		return nil, fmt.Errorf("read caller transcript: %w", err)
+	}
+	if len(data) > maxCallerTranscriptSize {
+		return nil, errTranscriptPathNotOwned
+	}
+	entries, _, err := parseEntries(data, 0)
+	return entries, err
 }
