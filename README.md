@@ -41,8 +41,6 @@ External agent discovery is opt-in. Once an `entire-agent-<name>` binary is on y
 
 Entire honors this flag only from an untracked `.entire/settings.local.json`, because it lets Entire run `entire-agent-*` binaries from your `PATH`. In the shared `.entire/settings.json` it is ignored, and `entire status` reports why. Without the flag, Entire ignores external agent binaries even when they're installed.
 
-To report token usage, declare the `token_calculator` capability and implement `calculate-tokens`; see the [protocol spec](https://github.com/entireio/cli/blob/main/docs/architecture/external-agent-protocol.md#capability-token_calculator).
-
 ### LangGraph and CrewAI
 
 LangGraph and CrewAI support is provided by the Python package
