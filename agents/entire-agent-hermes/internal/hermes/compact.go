@@ -9,9 +9,18 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/entireio/external-agents/agents/entire-agent-hermes/internal/protocol"
 )
+
+// compactCLIVersion is the Entire CLI version the CLI passes to plugins.
+func compactCLIVersion() string {
+	if v := strings.TrimSpace(os.Getenv("ENTIRE_CLI_VERSION")); v != "" {
+		return v
+	}
+	return "unknown"
+}
 
 type compactLine struct {
 	Version    int    `json:"v"`
@@ -56,6 +65,7 @@ func (a *Agent) CompactTranscript(path string) (protocol.CompactTranscriptRespon
 		return protocol.CompactTranscriptResponse{}, err
 	}
 	var output bytes.Buffer
+	version := compactCLIVersion()
 	for _, entry := range entries {
 		var content any
 		typ := entry.Type
@@ -88,7 +98,7 @@ func (a *Agent) CompactTranscript(path string) (protocol.CompactTranscriptRespon
 		default:
 			continue
 		}
-		line := compactLine{Version: 1, Agent: agentName, CLIVersion: "unknown", Type: typ, Timestamp: entry.Timestamp, Content: content}
+		line := compactLine{Version: 1, Agent: agentName, CLIVersion: version, Type: typ, Timestamp: entry.Timestamp, Content: content}
 		data, err := json.Marshal(line)
 		if err != nil {
 			return protocol.CompactTranscriptResponse{}, err

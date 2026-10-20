@@ -54,3 +54,27 @@ func TestCompactTranscriptRejectsSymlinkAndDirectory(t *testing.T) {
 		t.Fatal("CompactTranscript accepted a relative path")
 	}
 }
+
+// The CLI passes its version to plugins; compact lines should carry it.
+func TestCompactTranscriptStampsCLIVersion(t *testing.T) {
+	t.Setenv("HERMES_HOME", t.TempDir())
+	t.Setenv("ENTIRE_CLI_VERSION", "9.8.7")
+	fixture, err := os.ReadFile(filepath.Join("..", "..", "testdata", "transcript.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "entire-compact-5678.jsonl")
+	writeFixture(t, path, fixture, 0o600)
+
+	out, err := New().CompactTranscript(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := base64.StdEncoding.DecodeString(out.Transcript)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), `"cli_version":"unknown"`) || !strings.Contains(string(data), `"cli_version":"9.8.7"`) {
+		t.Fatalf("compact lines should carry ENTIRE_CLI_VERSION:\n%s", data)
+	}
+}
