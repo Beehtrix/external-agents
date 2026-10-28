@@ -93,6 +93,13 @@ func TestCalculateTokensExportShapes(t *testing.T) {
 			want:   protocol.TokenUsageResponse{InputTokens: 5650, OutputTokens: 124, APICallCount: 2},
 		},
 		{
+			name: "accumulated_usage without input or output counts falls back to usage",
+			export: tokenExport(`
+  "usage": {"input_tokens": 300, "output_tokens": 200, "total_tokens": 500, "cache_read_input_tokens": null, "cache_write_input_tokens": null},
+  "accumulated_usage": {"input_tokens": null, "output_tokens": null, "total_tokens": 500, "cache_read_input_tokens": null, "cache_write_input_tokens": null}`),
+			want: protocol.TokenUsageResponse{InputTokens: 300, OutputTokens: 200, APICallCount: 1},
+		},
+		{
 			name: "null cache fields count as no cache",
 			export: tokenExport(`
   "accumulated_usage": {"input_tokens": 900, "output_tokens": 30, "total_tokens": 930, "cache_read_input_tokens": null, "cache_write_input_tokens": null}`),

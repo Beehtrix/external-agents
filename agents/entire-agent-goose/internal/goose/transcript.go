@@ -303,12 +303,13 @@ func sessionTokenUsage(meta *gooseSessionMeta) protocol.TokenUsageResponse {
 	}
 }
 
-// reported is false for a missing object and for goose's all-null default, so
-// a session that has not called a model yet falls through to the next shape.
-// Zeros goose did report count as reported.
+// reported is true when the object carries an input or output count; zeros
+// goose did report count. A missing object, goose's all-null default, or one
+// holding only total/cache figures (which cannot be split into input and
+// output) falls through to the next shape. Fields are never mixed across
+// objects: accumulated_usage and usage cover different spans.
 func (u *gooseUsage) reported() bool {
-	return u != nil && (u.InputTokens != nil || u.OutputTokens != nil || u.TotalTokens != nil ||
-		u.CacheReadInputTokens != nil || u.CacheWriteInputTokens != nil)
+	return u != nil && (u.InputTokens != nil || u.OutputTokens != nil)
 }
 
 // tokenUsage maps goose's Usage onto Entire's split. goose's input_tokens
